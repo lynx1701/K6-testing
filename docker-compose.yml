@@ -16,8 +16,4 @@ services:
     volumes:
       - ./results:/results
     command:
-      [
-        "run",
-        "--summary-export=/results/summary.json",
-        "/scripts/tests/streams/loadTest.js",
-      ]
+      ["run", "--summary-export=/results/summary.json", "/src/loadTest.js"]

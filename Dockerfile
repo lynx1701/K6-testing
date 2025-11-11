@@ -1,30 +1,30 @@
-# ----- Build stage: transpile TypeScript to JS -----
-    FROM node:20-alpine AS builder
+    FROM node:20-alpine AS build
     WORKDIR /app
-    COPY package*.json ./
+    COPY package.json package-lock.json* ./
     RUN npm ci
     COPY tsconfig.json ./
     COPY src ./src
-    RUN npm run build
+    RUN npm run build && ls -l dist
     
-    # ----- Runtime stage: run tests with k6 -----
-    FROM grafana/k6:latest
-    # Copy compiled scripts into /scripts
-    COPY --from=builder /app/dist /scripts
+    FROM grafana/k6:latest AS k6src
     
-    # Defaults (can be overridden by env / compose)
-    ENV TARGET_URL="https://test.k6.io" \
-        TEST_TYPE="load" \
-        LOAD_VUS="30" \
-        SPIKE_PRE_VUS="100" \
-        SPIKE_MAX_VUS="1000" \
-        SOAK_RATE="10" \
-        SOAK_DURATION="2h" \
-        SOAK_PRE_VUS="50" \
-        SOAK_MAX_VUS="200" \
-        SLEEP="1"
+    FROM node:20-alpine
+    WORKDIR /app
     
-    # Default command: run the scenario selector file
-    # (You can override this in docker-compose or CLI)
-    CMD ["run", "--summary-export=/results/summary.json", "/scripts/tests/streams/loadTest.js"]
+    ENV HOST=0.0.0.0
+    ENV PORT=8080
+    ENV OUT_DIR=/out
+    ENV LOG_DIR=/logs
+        
+    COPY --from=k6src /usr/bin/k6 /usr/bin/k6
+        
+    COPY --from=build /app/dist ./dist
+    COPY package.json package-lock.json* ./
+    RUN npm ci --omit=dev
+    
+    RUN mkdir -p /out /logs
+    VOLUME ["/out", "/logs"]
+    
+    EXPOSE 8080
+    CMD ["node", "dist/server.cjs"]
     

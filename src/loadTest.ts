@@ -1,33 +1,59 @@
-import { Options } from "k6/options";
+import http from "k6/http";
+import { check, sleep } from "k6";
+import type { Options } from "k6/options";
+
 import { loadOptions } from "./options/loadOptions";
 import { stressOptions } from "./options/stressOptions";
 import { spikeOptions } from "./options/spikeOptions";
 import { soakOptions } from "./options/soakOptions";
+import { config } from "./config";
+import { finalizeOptions, url } from "./utils";
 
-export { main } from "./main";
-
-const TEST_TYPE = (__ENV.TEST_TYPE || "load").toLowerCase(); // load|stress|soak|spike
-
-const baseThresholds: Options["thresholds"] = {
-  http_req_failed: ["rate<0.01"], // < 1% errors
-  http_req_duration: ["p(95)<500"], // 95% under 500ms
-};
+const { METHOD, HEADERS, BODY, SLEEP, PRESET } = config;
 
 function pickOptions(kind: string): Options {
   switch (kind) {
     case "load":
-      return loadOptions;
+      return finalizeOptions(loadOptions);
     case "stress":
-      return stressOptions;
+      return finalizeOptions(stressOptions);
     case "spike":
-      return spikeOptions;
+      return finalizeOptions(spikeOptions);
     case "soak":
-      return soakOptions;
+      return finalizeOptions(soakOptions);
     default:
       throw new Error(
-        `Unknown TEST_TYPE "${kind}" (use load|stress|spike|soak)`
+        `Unknown scenario "${kind}" (use load|stress|spike|soak)`
       );
   }
 }
 
-export const options: Options = pickOptions(TEST_TYPE);
+export const options: Options = pickOptions(PRESET);
+
+export function main() {
+  const u = url();
+  let res;
+
+  switch (METHOD) {
+    case "GET":
+      res = http.get(u, { headers: HEADERS });
+      break;
+    case "POST":
+      res = http.post(u, BODY, { headers: HEADERS });
+      break;
+    case "PUT":
+      res = http.put(u, BODY, { headers: HEADERS });
+      break;
+    case "PATCH":
+      res = http.patch(u, BODY, { headers: HEADERS });
+      break;
+    case "DELETE":
+      res = http.del(u, null, { headers: HEADERS });
+      break;
+    default:
+      res = http.request(METHOD, u, BODY, { headers: HEADERS });
+  }
+
+  check(res, { "status is 2xx/3xx": (r) => r.status >= 200 && r.status < 400 });
+  if (SLEEP > 0) sleep(SLEEP);
+}

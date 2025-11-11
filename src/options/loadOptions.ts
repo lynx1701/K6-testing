@@ -8,9 +8,9 @@ export const loadOptions: Options = {
       executor: "ramping-vus",
       startVUs: 1,
       stages: [
-        { duration: "2m", target: Number(__ENV.LOAD_VUS) || 20 },
-        { duration: "5m", target: Number(__ENV.LOAD_VUS) || 20 },
-        { duration: "2m", target: 0 },
+        { duration: "2m", target: Number(__ENV.LOAD_VUS) || 1 },
+        // { duration: "5m", target: Number(__ENV.LOAD_VUS) || 1 },
+        // { duration: "2m", target: 0 },
       ],
       gracefulRampDown: "30s",
       exec: "main",
