@@ -66,7 +66,7 @@ app.post("/run", async (req, res) => {
     ];
 
     const provider = selectProvider(providerName);
-    const runtimeParams: ConfigureParams = {
+    const loggerParams: ConfigureParams = {
       dsn,
       endpointSafe,
       timestamp,
@@ -75,8 +75,8 @@ app.post("/run", async (req, res) => {
       summaryPath,
     };
 
-    const runtime = provider.configure(args, env, runtimeParams);
-    const { code, error } = await runK6(args, env, runtime);
+    const logger = provider.configure(args, env, loggerParams);
+    const { code, error } = await runK6(args, env, logger);
 
     let summary: any | undefined;
     try {
@@ -91,8 +91,8 @@ app.post("/run", async (req, res) => {
       exitCode: code ?? 0,
       summaryPath: fs.existsSync(summaryPath) ? summaryPath : undefined,
       logPath:
-        runtime.logPath && fs.existsSync(runtime.logPath)
-          ? runtime.logPath
+        logger.logPath && fs.existsSync(logger.logPath)
+          ? logger.logPath
           : undefined,
       summary,
       error: error || undefined,
@@ -105,7 +105,7 @@ app.post("/run", async (req, res) => {
 function runK6(
   args: string[],
   env: NodeJS.ProcessEnv,
-  runtime: {
+  logger: {
     logInformation?: (b: Buffer) => void;
     logError?: (b: Buffer) => void;
     onClose?: (code: number | null) => void;
@@ -118,17 +118,17 @@ function runK6(
     //logs
     child.stdout.on("data", (d: Buffer) => {
       process.stdout.write(d);
-      runtime.logInformation?.(d);
+      logger.logInformation?.(d);
     });
     //errors
     child.stderr.on("data", (d: Buffer) => {
       process.stderr.write(d);
       errBuf += d.toString();
-      runtime.logError?.(d);
+      logger.logError?.(d);
     });
 
     child.on("close", (code) => {
-      runtime.onClose?.(code);
+      logger.onClose?.(code);
       resolve({ code: code ?? 0, error: errBuf || undefined });
     });
   });
