@@ -22,7 +22,7 @@ _Payload example:_
 `{
   "method": "GET | POST | PUT | PATCH | DELETE",
   "host": "https://api.example.com",
-  "endpoints": ["/health", "/status"],   // one or more, runs sequentially
+  "endpoints": ["/health", "/status"],
   "scenario": "load | stress | spike | soak"
 }`
 
