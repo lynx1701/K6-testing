@@ -12,8 +12,9 @@ import { ResponseBody } from "./interfaces/ResponseBody";
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
-const OUT_DIR = path.resolve(process.env.OUT_DIR || "./out");
+const OUT_DIR = path.resolve(process.env.OUT_DIR || "./summaries");
 const LOG_DIR = path.resolve(process.env.LOG_DIR || "./logs");
+
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
@@ -53,9 +54,9 @@ app.post("/run", async (req, res) => {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       TARGET_HOST: host,
-      ENDPOINT: ep,
+      TARGET_URL: ep,
       METHOD: method,
-      SCENARIO_PRESET: scenario,
+      PRESET: scenario,
     };
     const args = [
       "run",
@@ -64,7 +65,6 @@ app.post("/run", async (req, res) => {
       path.resolve("./dist/test.js"),
     ];
 
-    // logging provider.
     const provider = selectProvider(providerName);
     const runtimeParams: ConfigureParams = {
       dsn,
@@ -106,8 +106,8 @@ function runK6(
   args: string[],
   env: NodeJS.ProcessEnv,
   runtime: {
-    onStdout?: (b: Buffer) => void;
-    onStderr?: (b: Buffer) => void;
+    logInformation?: (b: Buffer) => void;
+    logError?: (b: Buffer) => void;
     onClose?: (code: number | null) => void;
   }
 ): Promise<{ code: number; error?: string }> {
@@ -115,14 +115,16 @@ function runK6(
     const child = spawn("k6", args, { env });
     let errBuf = "";
 
+    //logs
     child.stdout.on("data", (d: Buffer) => {
       process.stdout.write(d);
-      runtime.onStdout?.(d);
+      runtime.logInformation?.(d);
     });
+    //errors
     child.stderr.on("data", (d: Buffer) => {
       process.stderr.write(d);
       errBuf += d.toString();
-      runtime.onStderr?.(d);
+      runtime.logError?.(d);
     });
 
     child.on("close", (code) => {

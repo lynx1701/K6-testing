@@ -1,37 +1,17 @@
-import http from "k6/http";
 import { check, sleep } from "k6";
+import http from "k6/http";
 import type { Options } from "k6/options";
 
-import { loadOptions } from "./options/loadOptions";
-import { stressOptions } from "./options/stressOptions";
-import { spikeOptions } from "./options/spikeOptions";
-import { soakOptions } from "./options/soakOptions";
 import { config } from "./config";
-import { finalizeOptions, url } from "./utils";
+import { pickOptions, url } from "./utils";
 
-const { METHOD, HEADERS, BODY, SLEEP, PRESET } = config;
-
-function pickOptions(kind: string): Options {
-  switch (kind) {
-    case "load":
-      return finalizeOptions(loadOptions);
-    case "stress":
-      return finalizeOptions(stressOptions);
-    case "spike":
-      return finalizeOptions(spikeOptions);
-    case "soak":
-      return finalizeOptions(soakOptions);
-    default:
-      throw new Error(
-        `Unknown scenario "${kind}" (use load|stress|spike|soak)`
-      );
-  }
-}
+const { METHOD, HEADERS, BODY, SLEEP, PRESET, TARGET_HOST, TARGET_URL } =
+  config;
 
 export const options: Options = pickOptions(PRESET);
 
 export function main() {
-  const u = url();
+  const u = url(TARGET_HOST, TARGET_URL);
   let res;
 
   switch (METHOD) {
