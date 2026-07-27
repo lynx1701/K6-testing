@@ -2,10 +2,6 @@
 
 Load testing with K6 tooling
 
-## TODOS:
-
-1. Resolve /run function to work properly and access test.js
-
 ## Install
 
 1. `docker build -t my-k6-api -f Dockerfile .`
